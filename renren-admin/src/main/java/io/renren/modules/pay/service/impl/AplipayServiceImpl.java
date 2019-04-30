@@ -5,6 +5,7 @@ import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.domain.AlipayTradePayModel;
 import com.alipay.api.domain.AlipayTradePrecreateModel;
+import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePayRequest;
 import com.alipay.api.request.AlipayTradePrecreateRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
@@ -125,8 +126,18 @@ public class AplipayServiceImpl  implements AlipayService {
     public Boolean dealBusiness(HttpServletRequest request) {
         //先将支付宝回调的信息处理成map
         Map<String, String> map = toMap(request);
-        System.out.println(JsonUtils.object2String(map));
-        System.out.println("处理业务完毕");
+        try {
+            boolean success = isSuccess(map);
+            if(success){
+                System.out.println(JsonUtils.object2String(map));
+                System.out.println("处理业务完毕");
+            }else{
+                return false;
+            }
+        } catch (AlipayApiException e) {
+            e.printStackTrace();
+        }
+
         return true;
     }
 
@@ -151,6 +162,28 @@ public class AplipayServiceImpl  implements AlipayService {
             params.put(name, valueStr);
         }
         return params;
+    }
+
+    /**
+     * 校验支付宝支付是否成功
+     *
+     * @param params
+     *            http请求
+     * @return 成功即为真
+     * @throws AlipayApiException
+     */
+    private boolean isSuccess(final Map<String, String> params) throws AlipayApiException {
+        boolean signVerified = AlipaySignature.rsaCheckV1(params, alipayConfig.getAlipayPublicKey(),
+                alipayConfig.getInputCharset(), alipayConfig.getSignType()); // 调用SDK验证签名
+        if (!signVerified) {
+            return false;
+        }
+        // 交易状态
+        String trade_status = params.get("trade_status");
+        if (!trade_status.equals("TRADE_FINISHED") && !trade_status.equals("TRADE_SUCCESS")) {
+            return false;
+        }
+        return true;
     }
 
 }
