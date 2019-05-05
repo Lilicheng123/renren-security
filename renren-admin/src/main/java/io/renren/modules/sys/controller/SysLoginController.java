@@ -19,12 +19,19 @@ package io.renren.modules.sys.controller;
 
 import com.google.code.kaptcha.Constants;
 import com.google.code.kaptcha.Producer;
+import io.renren.common.utils.AesUtil;
+import io.renren.common.utils.Constant;
+import io.renren.common.utils.DateUtil;
 import io.renren.common.utils.R;
+import io.renren.modules.sys.entity.AccessToken;
+import io.renren.modules.sys.entity.WechatUserUnionID;
+import io.renren.modules.sys.service.WeixinLoginService;
 import io.renren.modules.sys.shiro.ShiroUtils;
 import org.apache.shiro.authc.*;
 import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -46,6 +53,9 @@ import java.io.IOException;
 public class SysLoginController {
 	@Autowired
 	private Producer producer;
+
+	@Autowired
+	private WeixinLoginService weixinLoginService;
 	
 	@RequestMapping("captcha.jpg")
 	public void captcha(HttpServletResponse response)throws IOException {
@@ -99,5 +109,46 @@ public class SysLoginController {
 		ShiroUtils.logout();
 		return "redirect:login.html";
 	}
-	
+
+
+	/**
+	 * 重定向到微信扫码登录地址
+	 * @return
+	 */
+	@RequestMapping(value = "/sys/weixinLogin", method = RequestMethod.GET)
+	public String weixinLogin( HttpServletResponse resp){
+		String url = weixinLoginService.genLoginUrl();
+		return "redirect:"+url;
+	}
+
+	 /**
+     * 回调地址处理
+     * @param code
+     * @param state
+     * @return
+     */
+    @GetMapping(value = "sys/weixinconnect")
+    public R callback(String code, String state) {
+        String access_token=null;
+        String openid=null;
+        if (code != null && state != null) {
+            // 验证state为了用于防止跨站请求伪造攻击
+            String decrypt = AesUtil.decrypt(AesUtil.parseHexStr2Byte(state), AesUtil.PASSWORD_SECRET_KEY, 16);
+            if (!decrypt.equals(Constant.PWD_MD5 + DateUtil.getYYYYMMdd())) {
+                return R.error("登陆失败");
+            }
+            AccessToken access = weixinLoginService.getAccessToken(code);
+            if (access != null) {
+                // 把获取到的access_token和openId赋值给变量
+                access_token=access.getAccess_token();
+                openid=access.getOpenid();
+                // 存在则把当前账号信息授权给扫码用户
+                // 拿到openid获取微信用户的基本信息
+                // 此处可以写业务逻辑
+                WechatUserUnionID userUnionID = weixinLoginService.getUserUnionID(access_token,openid);
+                return R.ok().put("userInfo",userUnionID);
+            }
+        }
+        return R.error("登陆失败");
+    }
 }

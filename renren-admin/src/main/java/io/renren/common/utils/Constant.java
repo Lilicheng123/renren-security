@@ -28,6 +28,11 @@ public class Constant {
     /** 数据权限过滤 */
 	public static final String SQL_FILTER = "sql_filter";
 
+    /**
+     * 自定义加密措施
+     */
+    public static final String PWD_MD5 = "Cao#@Feng";
+
 
 	/**
 	 * 菜单类型
