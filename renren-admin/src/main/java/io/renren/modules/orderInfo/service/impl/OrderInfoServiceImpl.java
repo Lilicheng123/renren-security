@@ -101,8 +101,9 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoDao, OrderInfoEnt
         orderInfoEntity.setMemberName("admin");
         orderInfoEntity.setPayStatus(0);
         orderInfoEntity.setDiscount(BigDecimal.ZERO);
+        orderInfoEntity.setTotalAmount(payAbleAmount);
         this.insert(orderInfoEntity);
-        return R.ok();
+        return R.ok().put("orderInfo",orderInfoEntity);
     }
 
 }

@@ -6,6 +6,7 @@ var vm = new Vue({
 		orderInfo: {},
         goodsData:[], //商品列表
         addVisible:false,
+        payDialogVisible:false, //支付dialog
         //查询参数
 		q: {
 			orderNo: '',
@@ -138,10 +139,11 @@ var vm = new Vue({
 			    data: JSON.stringify(vm.order),
 			    success: function(r){
 			    	if(r.code === 0){
-						alert('操作成功', function(index){
-						    vm.addVisible=false;
-							vm.reload();
-						});
+			    	    vm.orderInfo=r.orderInfo;
+                        vm.addVisible=false;
+                        Vue.nextTick(function () {
+                            vm.payDialogVisible=true;
+                        },2000)
 					}else{
 						alert(r.msg);
 					}
